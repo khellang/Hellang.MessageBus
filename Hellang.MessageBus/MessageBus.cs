@@ -111,6 +111,8 @@ namespace Hellang.MessageBus
         /// </summary>
         private class Subscriber
         {
+            private static readonly Dictionary<Type, List<Handler>> HandlerCache = new Dictionary<Type,List<Handler>>();
+
             private readonly WeakReference _weakReference;
             private readonly List<Handler> _handlers;
 
@@ -120,8 +122,8 @@ namespace Hellang.MessageBus
             /// <param name="target">The target to subscribe.</param>
             public Subscriber(object target)
             {
-                _handlers = GetHandlers(target.GetType());
                 _weakReference = new WeakReference(target);
+                _handlers = GetHandlers(target);
             }
 
             /// <summary>
@@ -152,11 +154,33 @@ namespace Hellang.MessageBus
             }
 
             /// <summary>
+            /// Gets the handler methods, either from cache or by reflection.
+            /// </summary>
+            /// <param name="target">The target.</param>
+            /// <returns>List of handlers.</returns>
+            private static List<Handler> GetHandlers(object target)
+            {
+                var targetType = target.GetType();
+
+                List<Handler> handlers;
+                if (!HandlerCache.TryGetValue(targetType, out handlers))
+                {
+                    // No handlers cached, use reflection to get them.
+                    handlers = CreateHandlers(targetType);
+                    HandlerCache.Add(targetType, handlers);
+                }
+
+                return handlers;
+            }
+
+            /// <summary>
             /// Gets a list of handlers for the specified type.
             /// </summary>
             /// <param name="targetType">Type of the target.</param>
-            /// <returns>List of handlers for the specified type.</returns>
-            private static List<Handler> GetHandlers(Type targetType)
+            /// <returns>
+            /// List of handlers for the specified type.
+            /// </returns>
+            private static List<Handler> CreateHandlers(Type targetType)
             {
                 return targetType.GetMessageTypes()
                     .Select(messageType => CreateHandler(messageType, targetType))
