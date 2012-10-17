@@ -12,17 +12,19 @@ namespace Hellang.MessageBus.Tests
     public class MessageBusTests
     {
         [Test]
-        public void CanSubscribeToMessage()
+        public void CanSubscribe()
         {
             var bus = new DirectDispatchMessageBus();
 
-            var target = new SingleSubscriber();
-            bus.Subscribe(target);
+            Assert.DoesNotThrow(() => bus.Subscribe(new SingleSubscriber()));
+        }
 
-            var message = new TestMessage();
-            bus.Publish(message);
+        [Test]
+        public void CanSubscribeWithoutHandlerMethod()
+        {
+            var bus = new DirectDispatchMessageBus();
 
-            Assert.That(message.LastReceiver, Is.SameAs(target));
+            Assert.DoesNotThrow(() => bus.Subscribe(new string('s', 10)));
         }
 
         [Test]
@@ -70,6 +72,36 @@ namespace Hellang.MessageBus.Tests
 
             Assert.That(message.LastReceiver, Is.Null);
         }
+
+        [Test]
+        public void CanClearSubscriptions()
+        {
+            var bus = new DirectDispatchMessageBus();
+
+            var target = new SingleSubscriber();
+            bus.Subscribe(target);
+
+            bus.Clear();
+
+            var message = new TestMessage();
+            bus.Publish(message);
+
+            Assert.That(message.LastReceiver, Is.Null);
+        }
+
+        [Test]
+        public void SameTargetCanOnlySubscribeOnce()
+        {
+            var bus = new DirectDispatchMessageBus();
+
+            var target = new SingleSubscriber();
+            bus.Subscribe(target);
+            bus.Subscribe(target);
+
+            bus.Publish<TestMessage>();
+
+            Assert.That(target.ReceivedMessages, Is.EqualTo(1));
+        }
         
         [Test]
         public void MessageIsDispatchedOnCallingThreadByDefault()
@@ -104,7 +136,6 @@ namespace Hellang.MessageBus.Tests
 
             bus.Publish<TestMessage>();
 
-            Assert.That(dispatchedOnUIThread, Is.True);
             Assert.That(dispatchedOnUIThread, Is.True);
         }
 

@@ -53,7 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Hellang.MessageBus\Hellang.MessageBus.csproj">
-      <Project>{6d4b6525-e946-4ee5-921f-3a06d40230d5}</Project>
+      <Project>{2facf2c6-c84c-472f-8b1d-f9fb37e23cfa}</Project>
       <Name>Hellang.MessageBus</Name>
     </ProjectReference>
   </ItemGroup>

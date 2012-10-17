@@ -3,7 +3,7 @@
     /// <summary>
     /// Enables loosely-coupled publication of and subscription to messages.
     /// </summary>
-    public interface IMessageBus
+    public interface IMessageBus : IHideObjectMembers
     {
         /// <summary>
         /// Subscribes the specified target to all messages declared

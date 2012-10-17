@@ -35,9 +35,9 @@ namespace Hellang.MessageBus
     /// </summary>
     public class MessageBus : IMessageBus
     {
-        protected static Action<Action> UIThreadMarshaller;
+        private static Action<Action> _uiThreadMarshaller;
 
-        protected readonly List<Subscriber> Subscribers = new List<Subscriber>();
+        private readonly List<Subscriber> _subscribers = new List<Subscriber>();
         private readonly object _lock = new object();
 
         /// <summary>
@@ -46,7 +46,7 @@ namespace Hellang.MessageBus
         /// <param name="uiThreadMarshaller"> </param>
         public MessageBus(Action<Action> uiThreadMarshaller)
         {
-            UIThreadMarshaller = uiThreadMarshaller;
+            _uiThreadMarshaller = uiThreadMarshaller;
         }
 
         /// <summary>
@@ -54,12 +54,12 @@ namespace Hellang.MessageBus
         /// through implementations of <see cref="IHandle{T}" />.
         /// </summary>
         /// <param name="target">The target to subscribe for event publication.</param>
-        public virtual void Subscribe(object target)
+        public void Subscribe(object target)
         {
             WhileLocked(() =>
                 {
-                    if (Subscribers.Any(s => s.Matches(target))) return;
-                    Subscribers.Add(CreateSubscriberForTarget(target));
+                    if (!_subscribers.Any(s => s.Matches(target)))
+                        _subscribers.Add(new Subscriber(target));
                 });
         }
 
@@ -67,16 +67,16 @@ namespace Hellang.MessageBus
         /// Unsubscribes the specified target from all events.
         /// </summary>
         /// <param name="target">The target to unsubscribe.</param>
-        public virtual void Unsubscribe(object target)
+        public void Unsubscribe(object target)
         {
-            WhileLocked(() => Subscribers.RemoveAll(s => s.Matches(target)));
+            WhileLocked(() => _subscribers.RemoveAll(s => s.Matches(target)));
         }
 
         /// <summary>
         /// Publishes a new message of the given message type.
         /// </summary>
         /// <typeparam name="T">The type of message to publish.</typeparam>
-        public virtual void Publish<T>() where T : new()
+        public void Publish<T>() where T : new()
         {
             Publish(new T());
         }
@@ -86,27 +86,17 @@ namespace Hellang.MessageBus
         /// </summary>
         /// <typeparam name="T">The type of message to publish.</typeparam>
         /// <param name="message">The message.</param>
-        public virtual void Publish<T>(T message)
+        public void Publish<T>(T message)
         {
-            WhileLocked(() => Subscribers.RemoveAll(s => !s.Handle(message)));
+            WhileLocked(() => _subscribers.RemoveAll(s => !s.Handle(message)));
         }
 
         /// <summary>
         /// Clears all subscribers.
         /// </summary>
-        public virtual void Clear()
+        public void Clear()
         {
-            WhileLocked(() => Subscribers.Clear());
-        }
-
-        /// <summary>
-        /// Creates a subscriber for the specified target.
-        /// </summary>
-        /// <param name="target">The target.</param>
-        /// <returns>A subscriber.</returns>
-        protected virtual Subscriber CreateSubscriberForTarget(object target)
-        {
-            return new Subscriber(target);
+            WhileLocked(() => _subscribers.Clear());
         }
 
         private void WhileLocked(Action action)
@@ -119,10 +109,10 @@ namespace Hellang.MessageBus
         /// to messages from a <see cref="MessageBus"/>. It can have many handler methods
         /// which is represented by the <see cref="Handler"/> class.
         /// </summary>
-        protected class Subscriber
+        private class Subscriber
         {
-            protected readonly WeakReference WeakReference;
-            protected readonly List<Handler> Handlers;
+            private readonly WeakReference _weakReference;
+            private readonly List<Handler> _handlers;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="Subscriber" /> class.
@@ -130,8 +120,8 @@ namespace Hellang.MessageBus
             /// <param name="target">The target to subscribe.</param>
             public Subscriber(object target)
             {
-                Handlers = GetHandlers(target.GetType());
-                WeakReference = new WeakReference(target);
+                _handlers = GetHandlers(target.GetType());
+                _weakReference = new WeakReference(target);
             }
 
             /// <summary>
@@ -141,7 +131,7 @@ namespace Hellang.MessageBus
             /// <returns>true if the target matches, false otherwise.</returns>
             public bool Matches(object target)
             {
-                return WeakReference.Target == target;
+                return _weakReference.Target == target;
             }
 
             /// <summary>
@@ -152,10 +142,10 @@ namespace Hellang.MessageBus
             /// <returns>true if the message was handled successfully, false if the target is dead.</returns>
             public bool Handle<T>(T message)
             {
-                var target = WeakReference.Target;
+                var target = _weakReference.Target;
                 if (target == null) return false;
 
-                Handlers.Where(h => h.CanHandle(typeof(T))).ToList()
+                _handlers.Where(h => h.CanHandle(typeof(T)))
                     .ForEach(h => InvokeHandler(message, h, target));
 
                 return true;
@@ -168,11 +158,11 @@ namespace Hellang.MessageBus
             /// <param name="message">The message.</param>
             /// <param name="handler">The handler.</param>
             /// <param name="target">The target.</param>
-            protected virtual void InvokeHandler<T>(T message, Handler handler, object target)
+            private static void InvokeHandler<T>(T message, Handler handler, object target)
             {
                 if (handler.ShouldMarshalToUIThread)
                 {
-                    UIThreadMarshaller.Invoke(() => handler.InvokeHandler(target, message));
+                    _uiThreadMarshaller.Invoke(() => handler.InvokeHandler(target, message));
                     return;
                 }
 
@@ -184,35 +174,35 @@ namespace Hellang.MessageBus
             /// </summary>
             /// <param name="targetType">Type of the target.</param>
             /// <returns>List of handlers for the specified type.</returns>
-            protected static List<Handler> GetHandlers(Type targetType)
+            private static List<Handler> GetHandlers(Type targetType)
             {
-                return targetType.GetHandlerInterfaces()
-                    .Select(i => CreateHandler(i, targetType))
+                return targetType.GetMessageTypes()
+                    .Select(messageType => CreateHandler(messageType, targetType))
                     .ToList();
             }
 
             /// <summary>
             /// Creates a handler from the given interface type and target type.
             /// </summary>
-            /// <param name="interfaceType">Type of the interface.</param>
+            /// <param name="messageType">Type of the message.</param>
             /// <param name="targetType">Type of the target.</param>
-            /// <returns>A new handler.</returns>
-            protected static Handler CreateHandler(Type interfaceType, Type targetType)
+            /// <returns>
+            /// A new handler.
+            /// </returns>
+            private static Handler CreateHandler(Type messageType, Type targetType)
             {
-                var messageType = interfaceType.FirstGenericArgument();
-                var handlerMethod = interfaceType.GetMethod("Handle").ImplementedIn(targetType);
-
-                return new Handler(messageType, handlerMethod);
+                var handlerMethod = targetType.GetHandleMethodFor(messageType);
+                return handlerMethod == null ? null : new Handler(messageType, handlerMethod);
             }
 
             /// <summary>
             /// The <see cref="Handler"/> class is a wrapper 
             /// for a method which can handle a specific message type.
             /// </summary>
-            protected class Handler
+            private class Handler
             {
-                protected readonly Type MessageType;
-                protected readonly MethodInfo Method;
+                private readonly Type _messageType;
+                private readonly MethodInfo _method;
 
                 /// <summary>
                 /// Initializes a new instance of the <see cref="Handler" /> class.
@@ -221,8 +211,8 @@ namespace Hellang.MessageBus
                 /// <param name="method">The method.</param>
                 public Handler(Type messageType, MethodInfo method)
                 {
-                    MessageType = messageType;
-                    Method = method;
+                    _messageType = messageType;
+                    _method = method;
                     ShouldMarshalToUIThread = method.HasAttribute<HandleOnUIThreadAttribute>();
                 }
 
@@ -244,7 +234,7 @@ namespace Hellang.MessageBus
                 /// </returns>
                 public bool CanHandle(Type messageType)
                 {
-                    return MessageType.IsAssignableFrom(messageType);
+                    return _messageType.IsAssignableFrom(messageType);
                 }
 
                 /// <summary>
@@ -254,7 +244,7 @@ namespace Hellang.MessageBus
                 /// <param name="message">The message.</param>
                 public void InvokeHandler(object target, object message)
                 {
-                    Method.Invoke(target, new[] { message });
+                    _method.Invoke(target, new[] { message });
                 }
             }
         }
