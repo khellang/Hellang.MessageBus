@@ -146,27 +146,9 @@ namespace Hellang.MessageBus
                 if (target == null) return false;
 
                 _handlers.Where(h => h.CanHandle(typeof(T)))
-                    .ForEach(h => InvokeHandler(message, h, target));
+                    .ForEach(h => h.Invoke(target, message));
 
                 return true;
-            }
-
-            /// <summary>
-            /// Handles the specified message.
-            /// </summary>
-            /// <typeparam name="T"></typeparam>
-            /// <param name="message">The message.</param>
-            /// <param name="handler">The handler.</param>
-            /// <param name="target">The target.</param>
-            private static void InvokeHandler<T>(T message, Handler handler, object target)
-            {
-                if (handler.ShouldMarshalToUIThread)
-                {
-                    _uiThreadMarshaller.Invoke(() => handler.InvokeHandler(target, message));
-                    return;
-                }
-
-                handler.InvokeHandler(target, message);
             }
 
             /// <summary>
@@ -203,6 +185,7 @@ namespace Hellang.MessageBus
             {
                 private readonly Type _messageType;
                 private readonly MethodInfo _method;
+                private readonly bool _shouldMarshalToUIThread;
 
                 /// <summary>
                 /// Initializes a new instance of the <see cref="Handler" /> class.
@@ -213,17 +196,8 @@ namespace Hellang.MessageBus
                 {
                     _messageType = messageType;
                     _method = method;
-                    ShouldMarshalToUIThread = method.HasAttribute<HandleOnUIThreadAttribute>();
+                    _shouldMarshalToUIThread = method.HasAttribute<HandleOnUIThreadAttribute>();
                 }
-
-                /// <summary>
-                /// Gets a value indicating whether the message 
-                /// handling should be marshalled to the UI thread.
-                /// </summary>
-                /// <value>
-                /// <c>true</c> if the message handling should be marshalled to the UI thread; otherwise, <c>false</c>.
-                /// </value>
-                public bool ShouldMarshalToUIThread { get; private set; }
 
                 /// <summary>
                 /// Determines whether this instance can handle the specified message type.
@@ -242,9 +216,17 @@ namespace Hellang.MessageBus
                 /// </summary>
                 /// <param name="target">The target.</param>
                 /// <param name="message">The message.</param>
-                public void InvokeHandler(object target, object message)
+                public void Invoke(object target, object message)
                 {
-                    _method.Invoke(target, new[] { message });
+                    Action method = () => _method.Invoke(target, new[] { message });
+
+                    if (_shouldMarshalToUIThread)
+                    {
+                        _uiThreadMarshaller.Invoke(method);
+                        return;
+                    }
+
+                    method();
                 }
             }
         }
