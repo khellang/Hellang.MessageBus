@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{471353
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus", "Hellang.MessageBus\Hellang.MessageBus.csproj", "{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Net35", "Hellang.MessageBus.Net35\Hellang.MessageBus.Net35.csproj", "{02968891-E8F7-4D81-A32A-9C27152A7B03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,16 @@ Global
 		{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}.Release|ARM.ActiveCfg = Release|Any CPU
 		{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}.Release|x64.ActiveCfg = Release|Any CPU
 		{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}.Release|x86.ActiveCfg = Release|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Release|ARM.ActiveCfg = Release|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Release|x64.ActiveCfg = Release|Any CPU
+		{02968891-E8F7-4D81-A32A-9C27152A7B03}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

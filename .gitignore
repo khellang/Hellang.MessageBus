@@ -51,3 +51,4 @@ _ReSharper*/
 #NuGet
 packages/*
 !packages/repositories.config
+*.nupkg

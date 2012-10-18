@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <projectUrl>https://github.com/khellang/Hellang.MessageBus</projectUrl>
+    <iconUrl>http://cdn1.iconfinder.com/data/icons/STROKE/accounting/png/400/bus.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <copyright>Copyright Kristian Hellang 2012</copyright>
+    <tags>MessageBus EventAggregator</tags>
+  </metadata>
+</package>
