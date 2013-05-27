@@ -41,9 +41,14 @@ namespace Hellang.MessageBus
         private readonly object _lock = new object();
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="MessageBus" /> class without UI thread marshalling.
+        /// </summary>
+        public MessageBus() { }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MessageBus" /> class.
         /// </summary>
-        /// <param name="uiThreadMarshaller"> </param>
+        /// <param name="uiThreadMarshaller">The action for marshalling invocation to the UI thread.</param>
         public MessageBus(Action<Action> uiThreadMarshaller)
         {
             _uiThreadMarshaller = uiThreadMarshaller;
@@ -59,7 +64,9 @@ namespace Hellang.MessageBus
             WhileLocked(() =>
                 {
                     if (!_subscribers.Any(s => s.Matches(target)))
+                    {
                         _subscribers.Add(new Subscriber(target));
+                    }
                 });
         }
 
@@ -166,7 +173,7 @@ namespace Hellang.MessageBus
                 if (!HandlerCache.TryGetValue(targetType, out handlers))
                 {
                     // No handlers cached, use reflection to get them.
-                    handlers = CreateHandlers(targetType);
+                    handlers = CreateHandlers(targetType).ToList();
                     HandlerCache.Add(targetType, handlers);
                 }
 
@@ -180,25 +187,15 @@ namespace Hellang.MessageBus
             /// <returns>
             /// List of handlers for the specified type.
             /// </returns>
-            private static List<Handler> CreateHandlers(Type targetType)
+            private static IEnumerable<Handler> CreateHandlers(Type targetType)
             {
-                return targetType.GetMessageTypes()
-                    .Select(messageType => CreateHandler(messageType, targetType))
-                    .ToList();
-            }
+                foreach (var messageType in targetType.GetMessageTypes())
+                {
+                    var handlerMethod = targetType.GetHandleMethodFor(messageType);
+                    if (handlerMethod == null) continue;
 
-            /// <summary>
-            /// Creates a handler from the given interface type and target type.
-            /// </summary>
-            /// <param name="messageType">Type of the message.</param>
-            /// <param name="targetType">Type of the target.</param>
-            /// <returns>
-            /// A new handler.
-            /// </returns>
-            private static Handler CreateHandler(Type messageType, Type targetType)
-            {
-                var handlerMethod = targetType.GetHandleMethodFor(messageType);
-                return handlerMethod == null ? null : new Handler(messageType, handlerMethod);
+                    yield return new Handler(messageType, handlerMethod);
+                }
             }
 
             /// <summary>
@@ -244,7 +241,7 @@ namespace Hellang.MessageBus
                 {
                     Action method = () => _method.Invoke(target, new[] { message });
 
-                    if (_shouldMarshalToUIThread)
+                    if (_shouldMarshalToUIThread && _uiThreadMarshaller != null)
                     {
                         _uiThreadMarshaller.Invoke(method);
                         return;

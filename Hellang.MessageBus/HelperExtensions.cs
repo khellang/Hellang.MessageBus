@@ -36,7 +36,7 @@ namespace Hellang.MessageBus
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The first generic argument of the specified type.</returns>
-        internal static Type FirstGenericArgument(this Type type)
+        private static Type FirstGenericArgument(this Type type)
         {
             return type.GetGenericArguments().First();
         }
@@ -46,7 +46,7 @@ namespace Hellang.MessageBus
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>List of interface types.</returns>
-        internal static IEnumerable<Type> GetHandleInterfaces(this Type type)
+        private static IEnumerable<Type> GetHandleInterfaces(this Type type)
         {
             return type.GetInterfaces().Where(IsHandleInterface);
         }
@@ -58,7 +58,7 @@ namespace Hellang.MessageBus
         /// <returns>
         ///   <c>true</c> if the specified type is a handle interface; otherwise, <c>false</c>.
         /// </returns>
-        internal static bool IsHandleInterface(this Type type)
+        private static bool IsHandleInterface(this Type type)
         {
             return typeof(IHandle).IsAssignableFrom(type) && type.IsGenericType;
         }
@@ -112,7 +112,7 @@ namespace Hellang.MessageBus
         /// <returns>
         ///   <c>true</c> if the specified method is a handler method for the specified message type; otherwise, <c>false</c>.
         /// </returns>
-        internal static bool IsHandleMethodFor(this MethodInfo method, Type messageType)
+        private static bool IsHandleMethodFor(this MethodInfo method, Type messageType)
         {
             return method.Name == "Handle" 
                 && method.ReturnType == typeof(void)
@@ -127,7 +127,7 @@ namespace Hellang.MessageBus
         /// <returns>
         ///   <c>true</c> if the specified method has a single parameter of the specified type; otherwise, <c>false</c>.
         /// </returns>
-        internal static bool HasSingleParameterOfType(this MethodBase method, Type parameterType)
+        private static bool HasSingleParameterOfType(this MethodBase method, Type parameterType)
         {
             var parameters = method.GetParameters();
             if (parameters.Length != 1) return false;
