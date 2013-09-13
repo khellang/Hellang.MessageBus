@@ -150,6 +150,8 @@ namespace Hellang.MessageBus.Tests
             bus.Publish<DerivedTestMessage>();
 
             Assert.That(target.MessageHandleCount, Is.EqualTo(2));
+            Assert.That(target.HandledMessageTypes.Contains(typeof(TestMessage)));
+            Assert.That(target.HandledMessageTypes.Contains(typeof(DerivedTestMessage)));
         }
     }
 }

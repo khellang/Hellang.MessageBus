@@ -154,8 +154,7 @@ namespace Hellang.MessageBus
                 var target = _weakReference.Target;
                 if (target == null) return false;
 
-                _handlers.Where(h => h.CanHandle(typeof(T)))
-                    .ForEach(h => h.Invoke(target, message));
+                _handlers.Where(h => h.CanHandle(typeof(T))).ForEach(h => h.Invoke(target, message));
 
                 return true;
             }

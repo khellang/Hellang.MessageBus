@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Tests", "Hellang.MessageBus.Tests\Hellang.MessageBus.Tests.csproj", "{15D1B8CE-EEB2-432C-8ACB-466D8B577C13}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Tests", "test\Hellang.MessageBus.Tests\Hellang.MessageBus.Tests.csproj", "{15D1B8CE-EEB2-432C-8ACB-466D8B577C13}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{471353E7-2A7F-40FB-9131-9E199F42246D}"
 	ProjectSection(SolutionItems) = preProject
@@ -10,9 +10,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{471353
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus", "Hellang.MessageBus\Hellang.MessageBus.csproj", "{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus", "src\Hellang.MessageBus\Hellang.MessageBus.csproj", "{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Net35", "Hellang.MessageBus.Net35\Hellang.MessageBus.Net35.csproj", "{02968891-E8F7-4D81-A32A-9C27152A7B03}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Net35", "src\Hellang.MessageBus.Net35\Hellang.MessageBus.Net35.csproj", "{02968891-E8F7-4D81-A32A-9C27152A7B03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
