@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Runtime.CompilerServices;
 using Hellang.MessageBus.Tests.TestObjects;
 using Hellang.MessageBus.Tests.TestObjects.Messages;
 using Hellang.MessageBus.Tests.TestObjects.Subscribers;
@@ -64,13 +64,22 @@ namespace Hellang.MessageBus.Tests
         {
             var bus = new DirectDispatchMessageBus();
 
-            bus.Subscribe(new SingleSubscriber());
+            Subscribe(bus);
+
             GC.Collect();
 
             var message = new TestMessage();
             bus.Publish(message);
 
             Assert.That(message.LastReceiver, Is.Null);
+        }
+
+        // This must be in its own non-inlined method in order to work correctly on .NET Core 2.0+
+        // See https://github.com/dotnet/coreclr/issues/12847 for more details.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void Subscribe(IMessageBus bus)
+        {
+            bus.Subscribe(new SingleSubscriber());
         }
 
         [Test]
