@@ -168,8 +168,7 @@ namespace Hellang.MessageBus
             {
                 var targetType = target.GetType();
 
-                List<Handler> handlers;
-                if (!HandlerCache.TryGetValue(targetType, out handlers))
+                if (!HandlerCache.TryGetValue(targetType, out var handlers))
                 {
                     // No handlers cached, use reflection to get them.
                     handlers = CreateHandlers(targetType).ToList();
@@ -238,15 +237,15 @@ namespace Hellang.MessageBus
                 /// <param name="message">The message.</param>
                 public void Invoke(object target, object message)
                 {
-                    Action method = () => _method.Invoke(target, new[] { message });
+                    void Method() => _method.Invoke(target, new[] { message });
 
                     if (_shouldMarshalToUIThread && _uiThreadMarshaller != null)
                     {
-                        _uiThreadMarshaller.Invoke(method);
+                        _uiThreadMarshaller.Invoke(Method);
                         return;
                     }
 
-                    method();
+                    Method();
                 }
             }
         }
