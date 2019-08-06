@@ -10,6 +10,7 @@
     <PackageTags>MessageBus;EventAggregator</PackageTags>
     <PackageProjectUrl>https://github.com/khellang/Hellang.MessageBus</PackageProjectUrl>
     <PackageIconUrl>http://cdn1.iconfinder.com/data/icons/STROKE/accounting/png/400/bus.png</PackageIconUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/khellang/Hellang.MessageBus</RepositoryUrl>
   </PropertyGroup>
