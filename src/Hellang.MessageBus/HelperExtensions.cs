@@ -68,8 +68,18 @@ namespace Hellang.MessageBus
         /// <returns>The handle method for the specified message type or null.</returns>
         public static MethodInfo GetHandleMethodFor(this Type type, Type messageType)
         {
-            return type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                       .SingleOrDefault(method => method.IsHandleMethodFor(messageType));
+            var m= type.GetMethods(BindingFlags.Public | BindingFlags.Instance).SingleOrDefault(method => method.IsHandleMethodFor(messageType));
+            if (m == null)
+            {
+                // look for explicit method implementation
+                var handlerType = typeof(IHandle<>).MakeGenericType(messageType);
+                if (handlerType.IsAssignableFrom(type))
+                {
+                    m = handlerType.GetMethods().SingleOrDefault(method => method.IsHandleMethodFor(messageType));
+                }
+            }
+
+            return m;
         }
 
         /// <summary>
