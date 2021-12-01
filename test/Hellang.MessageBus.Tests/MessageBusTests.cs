@@ -3,31 +3,29 @@ using System.Runtime.CompilerServices;
 using Hellang.MessageBus.Tests.TestObjects;
 using Hellang.MessageBus.Tests.TestObjects.Messages;
 using Hellang.MessageBus.Tests.TestObjects.Subscribers;
-
-using NUnit.Framework;
+using Xunit;
 
 namespace Hellang.MessageBus.Tests
 {
-    [TestFixture]
     public class MessageBusTests
     {
-        [Test]
+        [Fact]
         public void CanSubscribe()
         {
             var bus = new DirectDispatchMessageBus();
 
-            Assert.DoesNotThrow(() => bus.Subscribe(new SingleSubscriber()));
+            bus.Subscribe(new SingleSubscriber());
         }
 
-        [Test]
+        [Fact]
         public void CanSubscribeWithoutHandlerMethod()
         {
             var bus = new DirectDispatchMessageBus();
 
-            Assert.DoesNotThrow(() => bus.Subscribe(new string('s', 10)));
+            bus.Subscribe(new string('s', 10));
         }
 
-        [Test]
+        [Fact]
         public void CanSubscribeMultipleTargets()
         {
             var bus = new DirectDispatchMessageBus();
@@ -40,11 +38,11 @@ namespace Hellang.MessageBus.Tests
             var message = new TestMessage();
             bus.Publish(message);
 
-            Assert.That(target1.LastMessage, Is.SameAs(message));
-            Assert.That(target2.LastMessage, Is.SameAs(message));
+            Assert.Same(message, target1.LastMessage);
+            Assert.Same(message, target2.LastMessage);
         }
 
-        [Test]
+        [Fact]
         public void CanUnsubscribe()
         {
             var bus = new DirectDispatchMessageBus();
@@ -56,10 +54,10 @@ namespace Hellang.MessageBus.Tests
             var message = new TestMessage();
             bus.Publish(message);
 
-            Assert.That(message.LastReceiver, Is.Null);
+            Assert.Null(message.LastReceiver);
         }
 
-        [Test]
+        [Fact]
         public void CollectedTargetIsUnsubscribed()
         {
             var bus = new DirectDispatchMessageBus();
@@ -71,7 +69,7 @@ namespace Hellang.MessageBus.Tests
             var message = new TestMessage();
             bus.Publish(message);
 
-            Assert.That(message.LastReceiver, Is.Null);
+            Assert.Null(message.LastReceiver);
         }
 
         // This must be in its own non-inlined method in order to work correctly on .NET Core 2.0+
@@ -82,7 +80,7 @@ namespace Hellang.MessageBus.Tests
             bus.Subscribe(new SingleSubscriber());
         }
 
-        [Test]
+        [Fact]
         public void CanClearSubscriptions()
         {
             var bus = new DirectDispatchMessageBus();
@@ -95,10 +93,10 @@ namespace Hellang.MessageBus.Tests
             var message = new TestMessage();
             bus.Publish(message);
 
-            Assert.That(message.LastReceiver, Is.Null);
+            Assert.Null(message.LastReceiver);
         }
 
-        [Test]
+        [Fact]
         public void SameTargetCanOnlySubscribeOnce()
         {
             var bus = new DirectDispatchMessageBus();
@@ -109,34 +107,34 @@ namespace Hellang.MessageBus.Tests
 
             bus.Publish<TestMessage>();
 
-            Assert.That(target.ReceivedMessages, Is.EqualTo(1));
+            Assert.Equal(1, target.ReceivedMessages);
         }
         
-        [Test]
+        [Fact]
         public void MessageIsDispatchedOnCallingThreadByDefault()
         {
-            var dispatchedOnUIThread = false;
+            var dispatchedOnUiThread = false;
             var bus = new MessageBus(action =>
-                {
-                    dispatchedOnUIThread = true;
-                    action();
-                });
+            {
+                dispatchedOnUiThread = true;
+                action();
+            });
 
             var target = new SingleSubscriber();
             bus.Subscribe(target);
 
             bus.Publish<TestMessage>();
 
-            Assert.That(dispatchedOnUIThread, Is.False);
+            Assert.False(dispatchedOnUiThread);
         }
 
-        [Test]
+        [Fact]
         public void HandleOnUIThreadAttributeIsHonored()
         {
-            var dispatchedOnUIThread = false;
+            var dispatchedOnUiThread = false;
             var bus = new MessageBus(action =>
             {
-                dispatchedOnUIThread = true;
+                dispatchedOnUiThread = true;
                 action();
             });
 
@@ -145,10 +143,10 @@ namespace Hellang.MessageBus.Tests
 
             bus.Publish<TestMessage>();
 
-            Assert.That(dispatchedOnUIThread, Is.True);
+            Assert.True(dispatchedOnUiThread);
         }
 
-        [Test]
+        [Fact]
         public void MessagesAreHandledInPolymorphicFashion()
         {
             var bus = new DirectDispatchMessageBus();
@@ -158,12 +156,12 @@ namespace Hellang.MessageBus.Tests
 
             bus.Publish<DerivedTestMessage>();
 
-            Assert.That(target.MessageHandleCount, Is.EqualTo(2));
-            Assert.That(target.HandledMessageTypes.Contains(typeof(TestMessage)));
-            Assert.That(target.HandledMessageTypes.Contains(typeof(DerivedTestMessage)));
+            Assert.Equal(2, target.MessageHandleCount);
+            Assert.Contains(typeof(TestMessage), target.HandledMessageTypes);
+            Assert.Contains(typeof(DerivedTestMessage), target.HandledMessageTypes);
         }
       
-        [Test]
+        [Fact]
         public void MessagesAreHandledByExplicitSubscriber() {
             var bus = new DirectDispatchMessageBus();
 
@@ -172,7 +170,7 @@ namespace Hellang.MessageBus.Tests
 
             bus.Publish<TestMessage>();
 
-            Assert.That(target.MessageHandleCount, Is.EqualTo(1));
+            Assert.Equal(1, target.MessageHandleCount);
         }
     }
      
