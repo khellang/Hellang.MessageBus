@@ -14,6 +14,7 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/khellang/Hellang.MessageBus</RepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
+    <LangVersion>10.0</LangVersion>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
