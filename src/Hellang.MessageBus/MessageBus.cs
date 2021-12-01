@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -118,10 +119,10 @@ namespace Hellang.MessageBus
         /// </summary>
         private class Subscriber
         {
-            private static readonly Dictionary<Type, List<Handler>> HandlerCache = new Dictionary<Type,List<Handler>>();
+            private static readonly ConcurrentDictionary<Type, IList<Handler>> HandlerCache = new ConcurrentDictionary<Type, IList<Handler>>();
 
             private readonly WeakReference _weakReference;
-            private readonly List<Handler> _handlers;
+            private readonly IList<Handler> _handlers;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="Subscriber" /> class.
@@ -164,20 +165,18 @@ namespace Hellang.MessageBus
             /// </summary>
             /// <param name="target">The target.</param>
             /// <returns>List of handlers.</returns>
-            private static List<Handler> GetHandlers(object target)
+            private static IList<Handler> GetHandlers(object target)
             {
                 var targetType = target.GetType();
-
-                if (!HandlerCache.TryGetValue(targetType, out var handlers))
-                {
-                    // No handlers cached, use reflection to get them.
-                    handlers = CreateHandlers(targetType).ToList();
-                    HandlerCache.Add(targetType, handlers);
-                }
-
+                var handlers = HandlerCache.GetOrAdd(targetType, AddFactory);
                 return handlers;
-            }
 
+               static IList<Handler> AddFactory(Type targetType) {
+                    // No handlers cached, use reflection to get them.
+                    return CreateHandlers(targetType).ToArray();
+                }
+            }
+            
             /// <summary>
             /// Gets a list of handlers for the specified type.
             /// </summary>
