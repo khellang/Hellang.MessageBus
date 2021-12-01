@@ -58,6 +58,17 @@ namespace Hellang.MessageBus.Tests
         }
 
         [Fact]
+        public void UiDispatchWithoutMarshallerIsNotSupported()
+        {
+            var bus = new MessageBus();
+
+            var target = new UIThreadSingleSubscriber();
+            bus.Subscribe(target);
+
+            Assert.Throws<NotSupportedException>(() => bus.Publish<TestMessage>());
+        }
+
+        [Fact]
         public void CollectedTargetIsUnsubscribed()
         {
             var bus = new DirectDispatchMessageBus();

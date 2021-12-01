@@ -22,14 +22,14 @@
         /// Publishes a new message of the given message type.
         /// </summary>
         /// <typeparam name="T">The type of message to publish.</typeparam>
-        void Publish<T>() where T : new();
+        void Publish<T>() where T : notnull, new();
 
         /// <summary>
         /// Publishes the specified message.
         /// </summary>
         /// <typeparam name="T">The type of message to publish</typeparam>
         /// <param name="message">The message.</param>
-        void Publish<T>(T message);
+        void Publish<T>(T message) where T : notnull;
 
         /// <summary>
         /// Clears all subscribers.
