@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hellang.MessageBus", "src\Hellang.MessageBus\Hellang.MessageBus.csproj", "{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{AAE29BAC-D38A-4E10-AA8A-B4A475CC60B5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{B66B14C7-36E0-4430-B83B-58F67BB129AC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,5 +49,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AE74ECE9-0F80-4E94-97DD-74CF2697D3D6}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2FACF2C6-C84C-472F-8B1D-F9FB37E23CFA} = {AAE29BAC-D38A-4E10-AA8A-B4A475CC60B5}
+		{15D1B8CE-EEB2-432C-8ACB-466D8B577C13} = {B66B14C7-36E0-4430-B83B-58F67BB129AC}
 	EndGlobalSection
 EndGlobal
