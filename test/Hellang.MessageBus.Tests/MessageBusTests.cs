@@ -174,6 +174,17 @@ namespace Hellang.MessageBus.Tests
 
             Assert.That(target.MessageHandleCount, Is.EqualTo(1));
         }
+        [Test]
+        public void MessagesAreHandledWhenPublishedAsObjectGenericType() {
+            var bus = new DirectDispatchMessageBus();
+
+            var target = new ExplicitSubscriber();
+            bus.Subscribe(target);
+
+            bus.Publish<object>(new TestMessage());
+
+            Assert.That(target.MessageHandleCount, Is.EqualTo(1));
+        }
     }
      
 }

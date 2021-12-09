@@ -9,7 +9,9 @@ namespace Hellang.MessageBus
     /// <summary>
     /// A marker interface for classes that can subscribe to messages.
     /// </summary>
-    public interface IHandle { }
+    public interface IHandle
+    {
+    }
 
     /// <summary>
     /// Denotes a class which can handle a particular type of message.
@@ -29,17 +31,19 @@ namespace Hellang.MessageBus
     /// handling should be done on the UI thread.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public class HandleOnUIThreadAttribute : Attribute { }
+    public class HandleOnUiThreadAttribute : Attribute
+    {
+    }
 
     /// <summary>
     /// Enables loosely-coupled publication of and subscription to messages.
     /// </summary>
     public class MessageBus : IMessageBus
     {
-        private static Action<Action> _uiThreadMarshaller;
+        private static Action<Action> uiThreadMarshaller;
 
-        private readonly List<Subscriber> _subscribers = new List<Subscriber>();
-        private readonly object _lock = new object();
+        private readonly ConcurrentDictionary<int, Subscriber>
+            subscribers = new ConcurrentDictionary<int, Subscriber>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBus" /> class without UI thread marshalling.
@@ -52,7 +56,7 @@ namespace Hellang.MessageBus
         /// <param name="uiThreadMarshaller">The action for marshalling invocation to the UI thread.</param>
         public MessageBus(Action<Action> uiThreadMarshaller)
         {
-            _uiThreadMarshaller = uiThreadMarshaller;
+            MessageBus.uiThreadMarshaller = uiThreadMarshaller;
         }
 
         /// <summary>
@@ -60,24 +64,22 @@ namespace Hellang.MessageBus
         /// through implementations of <see cref="IHandle{T}" />.
         /// </summary>
         /// <param name="target">The target to subscribe for event publication.</param>
-        public void Subscribe(object target)
+        public bool Subscribe(object target)
         {
-            WhileLocked(() =>
-                {
-                    if (!_subscribers.Any(s => s.Matches(target)))
-                    {
-                        _subscribers.Add(new Subscriber(target));
-                    }
-                });
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            var hash = target.GetHashCode();
+            return subscribers.TryAdd(hash, new Subscriber(target, hash));
         }
 
         /// <summary>
         /// Unsubscribes the specified target from all events.
         /// </summary>
         /// <param name="target">The target to unsubscribe.</param>
-        public void Unsubscribe(object target)
+        public bool Unsubscribe(object target)
         {
-            WhileLocked(() => _subscribers.RemoveAll(s => s.Matches(target)));
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            var hash = target.GetHashCode();
+            return subscribers.TryRemove(hash, out _);
         }
 
         /// <summary>
@@ -86,7 +88,7 @@ namespace Hellang.MessageBus
         /// <typeparam name="T">The type of message to publish.</typeparam>
         public void Publish<T>() where T : new()
         {
-            Publish(new T());
+            PublishCore(new T(), typeof(T));
         }
 
         /// <summary>
@@ -96,7 +98,15 @@ namespace Hellang.MessageBus
         /// <param name="message">The message.</param>
         public void Publish<T>(T message)
         {
-            WhileLocked(() => _subscribers.RemoveAll(s => !s.Handle(message)));
+            PublishCore(message, message.GetType());
+        }
+
+        /// <summary>
+        /// Publishes the specified message and removes all dead subscribers.
+        /// </summary>
+        protected virtual void PublishCore<T>(T message, Type t)
+        {
+            subscribers.RemoveAll(s => !s.Handle(message, t));
         }
 
         /// <summary>
@@ -104,58 +114,56 @@ namespace Hellang.MessageBus
         /// </summary>
         public void Clear()
         {
-            WhileLocked(() => _subscribers.Clear());
+            subscribers.Clear();
         }
 
-        private void WhileLocked(Action action)
-        {
-            lock (_lock) { action(); }
-        }
 
         /// <summary>
         /// A <see cref="Subscriber"/> is a wrapper for an instance subscribed
         /// to messages from a <see cref="MessageBus"/>. It can have many handler methods
-        /// which is represented by the <see cref="Handler"/> class.
+        /// which is represented by the <see cref="Handler&lt;T&gt;"/> class.
         /// </summary>
-        private class Subscriber
+        private class Subscriber : IEquatable<Subscriber>
         {
-            private static readonly ConcurrentDictionary<Type, IList<Handler>> HandlerCache = new ConcurrentDictionary<Type, IList<Handler>>();
+            private static readonly ConcurrentDictionary<Type, IList<IHandler>> handlerCache =
+                new ConcurrentDictionary<Type, IList<IHandler>>();
 
-            private readonly WeakReference _weakReference;
-            private readonly IList<Handler> _handlers;
+            private readonly WeakReference weakReference;
+            private readonly IList<IHandler> handlers;
+            private readonly int hash;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="Subscriber" /> class.
             /// </summary>
             /// <param name="target">The target to subscribe.</param>
-            public Subscriber(object target)
+            /// <param name="hash"></param>
+            public Subscriber(object target, int hash)
             {
-                _weakReference = new WeakReference(target);
-                _handlers = GetHandlers(target);
+                if (target == null) throw new ArgumentNullException(nameof(target));
+                this.hash = hash;
+                weakReference = new WeakReference(target);
+                handlers = GetHandlers(target);
             }
 
-            /// <summary>
-            /// Checks if the specified target matches the subscribed target.
-            /// </summary>
-            /// <param name="target">The target to match.</param>
-            /// <returns>true if the target matches, false otherwise.</returns>
-            public bool Matches(object target)
-            {
-                return _weakReference.Target == target;
-            }
+            //internal bool IsAlive => _weakReference.IsAlive;
 
             /// <summary>
             /// Handles the specified message.
             /// </summary>
             /// <typeparam name="T">The type of message to handle.</typeparam>
             /// <param name="message">The message.</param>
-            /// <returns>true if the message was handled successfully, false if the target is dead.</returns>
-            public bool Handle<T>(T message)
+            /// <param name="messageType"></param>
+            /// <returns>true if the target handler is alive, false if the target is dead.</returns>
+            public bool Handle<T>(T message, Type messageType)
             {
-                var target = _weakReference.Target;
+                var target = weakReference.Target;
                 if (target == null) return false;
-
-                _handlers.Where(h => h.CanHandle(typeof(T))).ForEach(h => h.Invoke(target, message));
+                // high traffic method, do not use linq here.
+                foreach (var h in handlers)
+                {
+                    if (!h.CanHandle(messageType)) continue;
+                    h.Invoke(target, message);
+                }
 
                 return true;
             }
@@ -165,18 +173,19 @@ namespace Hellang.MessageBus
             /// </summary>
             /// <param name="target">The target.</param>
             /// <returns>List of handlers.</returns>
-            private static IList<Handler> GetHandlers(object target)
+            private static IList<IHandler> GetHandlers(object target)
             {
                 var targetType = target.GetType();
-                var handlers = HandlerCache.GetOrAdd(targetType, AddFactory);
+                var handlers = handlerCache.GetOrAdd(targetType, AddFactory);
                 return handlers;
 
-               static IList<Handler> AddFactory(Type targetType) {
+                static IList<IHandler> AddFactory(Type targetType)
+                {
                     // No handlers cached, use reflection to get them.
                     return CreateHandlers(targetType).ToArray();
                 }
             }
-            
+
             /// <summary>
             /// Gets a list of handlers for the specified type.
             /// </summary>
@@ -184,37 +193,82 @@ namespace Hellang.MessageBus
             /// <returns>
             /// List of handlers for the specified type.
             /// </returns>
-            private static IEnumerable<Handler> CreateHandlers(Type targetType)
+            private static IEnumerable<IHandler> CreateHandlers(Type targetType)
             {
-                foreach (var messageType in targetType.GetMessageTypes())
+                foreach (var handleInterface in targetType.GetHandleInterfaces())
                 {
+                    var messageType = handleInterface.FirstGenericArgument();
                     var handlerMethod = targetType.GetHandleMethodFor(messageType);
                     if (handlerMethod == null) continue;
-
-                    yield return new Handler(messageType, handlerMethod);
+                    var handler = (IHandler)Activator.CreateInstance(typeof(Handler<>).MakeGenericType(messageType));
+                    handler.Initialize(handlerMethod.HasAttribute<HandleOnUiThreadAttribute>());
+                    yield return handler;
                 }
             }
 
             /// <summary>
-            /// The <see cref="Handler"/> class is a wrapper 
+            /// Checks if the specified target matches the subscribed target.
+            /// </summary>
+            /// <param name="target">The target to match.</param>
+            /// <returns>true if the target matches, false otherwise.</returns>
+            public bool Matches(object target)
+            {
+                return weakReference.IsAlive && Equals(weakReference.Target, target);
+            }
+
+            public bool Equals(Subscriber other)
+            {
+                if (other is null || !weakReference.IsAlive || !other.weakReference.IsAlive) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return hash == other.hash || Equals(weakReference.Target, other.weakReference.Target);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((Subscriber)obj);
+            }
+
+            public override int GetHashCode() => hash;
+
+            public static bool operator ==(Subscriber left, Subscriber right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(Subscriber left, Subscriber right)
+            {
+                return !Equals(left, right);
+            }
+
+            /// <summary>
+            /// The <see cref="Handler&lt;T&gt;"/> class is a wrapper 
             /// for a method which can handle a specific message type.
             /// </summary>
-            private class Handler
+            private class Handler<T> : IHandler
             {
-                private readonly Type _messageType;
-                private readonly MethodInfo _method;
-                private readonly bool _shouldMarshalToUIThread;
+                private readonly Type messageType;
+
+                //private readonly MethodInfo method;
+                private bool shouldMarshalToUiThread;
 
                 /// <summary>
-                /// Initializes a new instance of the <see cref="Handler" /> class.
-                /// </summary>
-                /// <param name="messageType">Type of the message.</param>
-                /// <param name="method">The method.</param>
-                public Handler(Type messageType, MethodInfo method)
+                /// Initializes a new instance of the <see cref="Handler&lt;T&gt;" /> class.
+                /// </summary> 
+                public Handler()
                 {
-                    _messageType = messageType;
-                    _method = method;
-                    _shouldMarshalToUIThread = method.HasAttribute<HandleOnUIThreadAttribute>();
+                    this.messageType = typeof(T);
+                }
+
+                /// <summary>
+                /// Initializes a new instance of the <see cref="Handler&lt;T&gt;" /> class.
+                /// </summary>
+                /// <param name="shouldMarshalToUi">true if invocation should be performed on UI thread</param>
+                public void Initialize(bool shouldMarshalToUi)
+                {
+                    this.shouldMarshalToUiThread = shouldMarshalToUi;
                 }
 
                 /// <summary>
@@ -226,7 +280,7 @@ namespace Hellang.MessageBus
                 /// </returns>
                 public bool CanHandle(Type messageType)
                 {
-                    return _messageType.IsAssignableFrom(messageType);
+                    return this.messageType.IsAssignableFrom(messageType);
                 }
 
                 /// <summary>
@@ -236,11 +290,15 @@ namespace Hellang.MessageBus
                 /// <param name="message">The message.</param>
                 public void Invoke(object target, object message)
                 {
-                    void Method() => _method.Invoke(target, new[] { message });
-
-                    if (_shouldMarshalToUIThread && _uiThreadMarshaller != null)
+                    void Method()
                     {
-                        _uiThreadMarshaller.Invoke(Method);
+                        var actualHandler = (IHandle<T>)target;
+                        actualHandler.Handle((T)message);
+                    }
+
+                    if (shouldMarshalToUiThread && uiThreadMarshaller != null)
+                    {
+                        uiThreadMarshaller.Invoke(Method);
                         return;
                     }
 
@@ -248,5 +306,12 @@ namespace Hellang.MessageBus
                 }
             }
         }
+    }
+
+    internal interface IHandler
+    {
+        void Initialize(bool shouldMarshalToUiThread);
+        bool CanHandle(Type messageType);
+        void Invoke(object target, object message);
     }
 }

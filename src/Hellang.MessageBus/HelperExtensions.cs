@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -48,16 +49,36 @@ namespace Hellang.MessageBus
         /// <summary>
         /// Removes all items in the specified list which matches the specified predicate.
         /// </summary>
-        /// <typeparam name="T">The type of items.</typeparam>
+        /// <typeparam name="K">The key type of items.</typeparam>
+        /// <typeparam name="V">The value type of items.</typeparam>
         /// <param name="list">The list.</param>
         /// <param name="predicate">The predicate.</param>
-        public static void RemoveAll<T>(this IList<T> list, Func<T, bool> predicate)
+        public static int RemoveAll<K, V>(this ConcurrentDictionary<K, V> list, Func<V, bool> predicate)
         {
-            var toRemove = list.Where(predicate).ToList();
-            foreach (var item in toRemove)
+            int i = 0;
+            foreach (var kvp in list.Where(kvp => predicate(kvp.Value)))
             {
-                list.Remove(item);
+                if (list.TryRemove(kvp.Key, out _)) i++;
             }
+
+            return i;
+        }
+
+        /// <summary>
+        /// Removes all items in the specified list which matches the specified predicate.
+        /// </summary>
+        /// <typeparam name="K">The key type of items.</typeparam>
+        /// <typeparam name="V">The value type of items.</typeparam>
+        /// <param name="list">The list.</param>
+        /// <param name="predicate">The predicate.</param>
+        public static bool RemoveFirst<K, V>(this ConcurrentDictionary<K, V> list, Func<V, bool> predicate)
+        {
+            foreach (var kvp in list.Where(kvp => predicate(kvp.Value)))
+            {
+                return (list.TryRemove(kvp.Key, out _));
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -68,7 +89,8 @@ namespace Hellang.MessageBus
         /// <returns>The handle method for the specified message type or null.</returns>
         public static MethodInfo GetHandleMethodFor(this Type type, Type messageType)
         {
-            var m= type.GetMethods(BindingFlags.Public | BindingFlags.Instance).SingleOrDefault(method => method.IsHandleMethodFor(messageType));
+            var m = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .SingleOrDefault(method => method.IsHandleMethodFor(messageType));
             if (m == null)
             {
                 // look for explicit method implementation
@@ -87,7 +109,7 @@ namespace Hellang.MessageBus
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The first generic argument of the specified type.</returns>
-        private static Type FirstGenericArgument(this Type type)
+        internal static Type FirstGenericArgument(this Type type)
         {
             return type.GetGenericArguments().First();
         }
@@ -97,7 +119,7 @@ namespace Hellang.MessageBus
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>List of interface types.</returns>
-        private static IEnumerable<Type> GetHandleInterfaces(this Type type)
+        internal static IEnumerable<Type> GetHandleInterfaces(this Type type)
         {
             return type.GetInterfaces().Where(IsHandleInterface);
         }
@@ -124,9 +146,9 @@ namespace Hellang.MessageBus
         /// </returns>
         private static bool IsHandleMethodFor(this MethodInfo method, Type messageType)
         {
-            return method.Name == "Handle" 
-                && method.ReturnType == typeof(void)
-                    && method.HasSingleParameterOfType(messageType);
+            return method.Name == "Handle"
+                   && method.ReturnType == typeof(void)
+                   && method.HasSingleParameterOfType(messageType);
         }
 
         /// <summary>

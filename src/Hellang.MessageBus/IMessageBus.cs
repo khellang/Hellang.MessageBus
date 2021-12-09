@@ -10,13 +10,13 @@
         /// through implementations of <see cref="IHandle{T}"/>.
         /// </summary>
         /// <param name="target">The target to subscribe for event publication.</param>
-        void Subscribe(object target);
+        bool Subscribe(object target);
 
         /// <summary>
         /// Unsubscribes the specified target from all events.
         /// </summary>
         /// <param name="target">The target to unsubscribe.</param>
-        void Unsubscribe(object target);
+        bool Unsubscribe(object target);
 
         /// <summary>
         /// Publishes a new message of the given message type.
